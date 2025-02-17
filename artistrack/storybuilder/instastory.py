@@ -24,6 +24,7 @@ def create_story(song_title, output_dir=None):
             s.release_date,
             s.duration,
             s.spotify_url,
+            s.spotify_uri,
             s.image_large_uri,
             COALESCE(a.name, 'Single') as album_name
         FROM songs s
@@ -37,7 +38,7 @@ def create_story(song_title, output_dir=None):
         print(f"Song '{song_title}' not found in database")
         return
     
-    name, release_date, duration, spotify_url, image_uri, album_name = song
+    name, release_date, duration, spotify_url, spotify_uri, image_uri, album_name = song
     
     # Create a new image (1080x1300)
     width = 1080
@@ -63,6 +64,19 @@ def create_story(song_title, output_dir=None):
     
     # Paste the art onto the story
     story.paste(art, (x, y))
+    
+    # Download and paste Spotify QR code
+    track_id = spotify_uri.split(':')[-1]
+    qr_url = f"https://scannables.scdn.co/uri/plain/png/ffffff/black/300/{spotify_uri}"
+    qr_response = requests.get(qr_url)
+    qr = Image.open(BytesIO(qr_response.content))
+    
+    # Calculate position for QR code (centered, below the streaming text)
+    qr_x = (width - qr.width) // 2
+    qr_y = y + art_height + 120  # Below the streaming text
+    
+    # Paste QR code
+    story.paste(qr, (qr_x, qr_y))
     
     # Add text
     draw = ImageDraw.Draw(story)
@@ -91,6 +105,11 @@ def create_story(song_title, output_dir=None):
     # Add "now streaming everywhere" closer to artwork
     streaming_y = y + art_height + 40
     draw.text((width//2, streaming_y), "NOW STREAMING EVERYWHERE", 
+              font=info_font, fill='white', anchor='mm')
+    
+    # Add "Scan to Listen" text below QR code
+    scan_y = qr_y + qr.height + 20
+    draw.text((width//2, scan_y), "Scan to Listen", 
               font=info_font, fill='white', anchor='mm')
     
     # Add link closer to streaming text

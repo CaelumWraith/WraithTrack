@@ -4,22 +4,25 @@ import os
 from pathlib import Path
 import requests
 import sys
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple, Optional
 
 class SpotifyApiError(Exception):
     """Custom exception for Spotify API errors"""
     pass
 
 class SpotifyClient:
-    def __init__(self, verbose: bool = False):
-        self.client_id = os.getenv("SPOTIFY_CLIENT_ID")
-        self.client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
+    """Client for interacting with Spotify API"""
+    
+    def __init__(self, artist_id='16SiO2DZeffJZAKlppdOAw', verbose=False):
+        """Initialize the client"""
+        self.artist_id = artist_id
         self.verbose = verbose
+        self.client_id = os.getenv('SPOTIFY_CLIENT_ID')
+        self.client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
         
         if not self.client_id or not self.client_secret:
-            print("Error: SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables must be set")
-            sys.exit(1)
-            
+            raise ValueError("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET environment variables must be set")
+        
         self.bearer_token = None
         self.bearer_token_expires = None
         
@@ -30,29 +33,27 @@ class SpotifyClient:
         data_dir.mkdir(parents=True, exist_ok=True)
         return data_dir
 
-    def load_cached_token(self):
-        data_dir = self.get_data_directory()
-        token_file = data_dir / "bearer_token.json"
+    def load_cached_token(self) -> Tuple[Optional[str], Optional[datetime]]:
+        """Load cached bearer token from file"""
+        token_path = self.get_data_directory() / 'bearer_token.json'
         
-        if not token_file.exists():
-            if self.verbose:
-                print("No cached token found")
+        if not token_path.exists():
             return None, None
-            
+        
         try:
-            with open(token_file) as f:
-                token_data = json.load(f)
-                
-            token_time = datetime.fromisoformat(token_data['timestamp'])
-            if (datetime.now() - token_time).total_seconds() < 3600:
-                if self.verbose:
-                    print("Using cached token:", json.dumps(token_data, indent=2))
-                return token_data['token'], token_data['expires']
-            elif self.verbose:
-                print("Cached token expired")
-                
+            with open(token_path, 'r') as f:
+                data = json.load(f)
+                timestamp = datetime.fromisoformat(data['timestamp'])
+                if timestamp > datetime.now():
+                    return data['token'], timestamp
         except (json.JSONDecodeError, KeyError, ValueError) as e:
-            print(f"Error reading cached token: {e}")
+            if self.verbose:
+                print(f"Error reading cached token: {e}")
+            return None, None
+        except Exception as e:
+            if self.verbose:
+                print(f"Unexpected error reading token: {e}")
+            return None, None
         
         return None, None
 
@@ -104,87 +105,61 @@ class SpotifyClient:
         
         return self.bearer_token
 
-    def get_artist_data(self, artist_id='16SiO2DZeffJZAKlppdOAw') -> Dict[str, Any]:
-        """Get artist data from Spotify API"""
+    def get_artist_data(self) -> Dict[str, Any]:
+        """Get artist data from Spotify API or cache"""
         token = self.ensure_valid_token()
-        data_dir = self.get_data_directory()
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        filename = f"{current_date}__artist_data.json"
-        filepath = data_dir / filename
         
-        if filepath.exists():
-            print(f"Found existing artist data for today in {filename}")
-            with open(filepath) as f:
-                data = json.load(f)
-                if self.verbose:
-                    print("Artist data:", json.dumps(data, indent=2))
-                return data
+        # Check for cached data
+        data_file = self.get_data_directory() / f"{datetime.now().strftime('%Y-%m-%d')}__artist_data.json"
         
         try:
+            if data_file.exists():
+                if self.verbose:
+                    print(f"Found existing artist data for today in {data_file.name}")
+                with open(data_file) as f:
+                    return json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
             if self.verbose:
-                print(f"Fetching artist data for {artist_id}...")
-                
-            response = requests.get(
-                f"https://api.spotify.com/v1/artists/{artist_id}",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            with open(filepath, 'w') as f:
-                json.dump(data, f, indent=4)
-                
+                print(f"Error reading cached artist data: {e}")
+        
+        # Fetch from API
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get(
+            f"https://api.spotify.com/v1/artists/{self.artist_id}",
+            headers=headers
+        )
+        response.raise_for_status()
+        
+        # Cache the response
+        artist_data = response.json()
+        try:
+            with open(data_file, 'w') as f:
+                json.dump(artist_data, f, indent=2)
+        except OSError as e:
             if self.verbose:
-                print("Received artist data:", json.dumps(data, indent=2))
-                
-            return data
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching artist data: {e}")
-            sys.exit(1)
+                print(f"Error caching artist data: {e}")
+        
+        return artist_data
 
-    def get_all_artist_albums(self, artist_id='16SiO2DZeffJZAKlppdOAw') -> List[Dict[str, Any]]:
+    def get_all_artist_albums(self) -> List[Dict[str, Any]]:
         """Get all albums (both full albums and singles) for an artist"""
         token = self.ensure_valid_token()
         
-        try:
-            all_items = []
-            offset = 0
-            limit = 50
+        all_albums = []
+        next_url = f"https://api.spotify.com/v1/artists/{self.artist_id}/albums?limit=50"
+        
+        while next_url:
+            response = requests.get(
+                next_url,
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            response.raise_for_status()
             
-            while True:
-                if self.verbose:
-                    print(f"Fetching albums (offset={offset}, limit={limit})...")
-                    
-                response = requests.get(
-                    f"https://api.spotify.com/v1/artists/{artist_id}/albums",
-                    headers={"Authorization": f"Bearer {token}"},
-                    params={
-                        "include_groups": "album,single",
-                        "limit": limit,
-                        "offset": offset,
-                        "market": "US"
-                    }
-                )
-                response.raise_for_status()
-                data = response.json()
-                
-                all_items.extend(data['items'])
-                
-                if self.verbose:
-                    print(f"Received {len(data['items'])} albums")
-                    print("Album data:", json.dumps(data, indent=2))
-                
-                if data['next'] is None:
-                    break
-                    
-                offset += limit
-            
-            return all_items
-            
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching artist albums: {e}")
-            sys.exit(1)
+            data = response.json()
+            all_albums.extend(data['items'])
+            next_url = data.get('next')
+        
+        return all_albums
 
     def get_album_tracks(self, album_id: str) -> List[Dict[str, Any]]:
         """Get all tracks for a specific album"""

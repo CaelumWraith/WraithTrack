@@ -1,11 +1,11 @@
 import json
 from datetime import datetime
 import os
-from data.model import init_db, recreate_db
-from discotech.spotify_client import SpotifyClient
-from data.data_manager import DataManager
-from discotech.generate_discography import generate_discography
-from storybuilder.instastory import create_story
+from artistrack.data.model import init_db, recreate_db
+from artistrack.discotech.spotify_client import SpotifyClient
+from artistrack.data.data_manager import DataManager
+from artistrack.discotech.generate_discography import generate_discography
+from artistrack.storybuilder.instastory import create_story
 import requests
 import sys
 from pathlib import Path
@@ -53,7 +53,8 @@ def populate_artist_data(verbose: bool = False):
         print(f"\nError populating database: {e}")
         sys.exit(1)
 
-if __name__ == "__main__":
+def main():
+    """Main entry point"""
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Artistrack - Track artist discography')
     parser.add_argument('--newdb', action='store_true', help='Recreate the database')
@@ -79,3 +80,7 @@ if __name__ == "__main__":
     # Generate story if requested
     if args.generate_story:
         create_story(args.generate_story, args.output_path)
+
+# pragma: no cover
+if __name__ == "__main__":
+    main()

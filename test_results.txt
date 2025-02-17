@@ -1,0 +1,58 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.3.4, pluggy-1.5.0 -- /Users/edward/.pyenv/versions/3.12.4/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/edward/Documents/dev/artistrack
+configfile: pytest.ini
+plugins: cov-6.0.0, anyio-4.8.0, mock-3.14.0
+collecting ... collected 15 items
+
+tests/test_artistrack.py::test_populate_artist_data PASSED               [  6%]
+tests/test_artistrack.py::test_populate_artist_data_error PASSED         [ 13%]
+tests/test_artistrack.py::test_main_refresh_data Fetching artist data...
+Fetching artist albums...
+Processing 1 albums...
+[1/1] Saved album: Test Album
+  - Saved 1 tracks
+
+Database population completed successfully!
+PASSED                  [ 20%]
+tests/test_artistrack.py::test_main_generate_story PASSED                [ 26%]
+tests/test_artistrack.py::test_main_build_discography PASSED             [ 33%]
+tests/test_data_manager.py::test_save_album PASSED                       [ 40%]
+tests/test_data_manager.py::test_save_song PASSED                        [ 46%]
+tests/test_generate_discography.py::test_generate_discography Database initialized at /private/var/folders/j7/1600tmb108z29y6ryvvvt4b40000gn/T/pytest-of-edward/pytest-17/test_generate_discography0/test.db
+Generated discography at /private/var/folders/j7/1600tmb108z29y6ryvvvt4b40000gn/T/pytest-of-edward/pytest-17/test_generate_discography0/discography.html
+PASSED     [ 53%]
+tests/test_generate_discography.py::test_generate_empty_discography Database initialized at /private/var/folders/j7/1600tmb108z29y6ryvvvt4b40000gn/T/pytest-of-edward/pytest-17/test_generate_empty_discograph0/test.db
+Generated discography at /private/var/folders/j7/1600tmb108z29y6ryvvvt4b40000gn/T/pytest-of-edward/pytest-17/test_generate_empty_discograph0/discography.html
+PASSED [ 60%]
+tests/test_listdb.py::test_list_db_contents PASSED                       [ 66%]
+tests/test_listdb.py::test_list_empty_db PASSED                          [ 73%]
+tests/test_spotify_client.py::test_get_artist_data PASSED                [ 80%]
+tests/test_spotify_client.py::test_get_all_artist_albums PASSED          [ 86%]
+tests/test_spotify_client.py::test_get_album_tracks PASSED               [ 93%]
+tests/test_story_generator.py::test_create_story Created story at /private/var/folders/j7/1600tmb108z29y6ryvvvt4b40000gn/T/pytest-of-edward/pytest-17/test_create_story0/story_Test-Song.png
+PASSED                  [100%]
+
+---------- coverage: platform darwin, python 3.12.4-final-0 ----------
+Name                                           Stmts   Miss  Cover   Missing
+----------------------------------------------------------------------------
+artistrack/__init__.py                             0      0   100%
+artistrack/artistrack.py                          57      2    96%   70, 85
+artistrack/data/__init__.py                        0      0   100%
+artistrack/data/data_manager.py                   57     22    61%   11, 19, 109-121, 125-132, 136-144
+artistrack/data/listdb.py                         39      3    92%   65-66, 72
+artistrack/data/model.py                          67      8    88%   86-95, 100, 154
+artistrack/data/populate_db.py                    69     69     0%   1-162
+artistrack/data/populate_singles.py               38     38     0%   1-83
+artistrack/discotech/__init__.py                   0      0   100%
+artistrack/discotech/generate_discography.py      37      2    95%   7, 221
+artistrack/discotech/spotify_client.py           125     28    78%   24, 41, 46-48, 51, 53-58, 80, 99, 102-104, 118, 123, 138-140, 175, 192-193, 198, 202-204
+artistrack/discotech/wraithdisco.py               51     51     0%   1-175
+artistrack/storybuilder/__init__.py                0      0   100%
+artistrack/storybuilder/instastory.py             75     12    84%   38-39, 90-93, 122, 139-144
+----------------------------------------------------------------------------
+TOTAL                                            615    235    62%
+
+
+============================== 15 passed in 1.04s ==============================

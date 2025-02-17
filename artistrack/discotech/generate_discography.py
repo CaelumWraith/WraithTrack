@@ -29,12 +29,14 @@ def generate_discography():
             a.release_date,
             a.spotify_url,
             a.album_type,
+            a.qr_code_url,
             a.image_large_uri,
             a.image_medium_uri,
             a.image_thumb_uri,
             s.name as track_name,
             s.track_number,
             s.spotify_url as track_url,
+            s.qr_code_url as track_qr_url,
             s.duration
         FROM albums a
         LEFT JOIN songs s ON a.album_id = s.album_id
@@ -50,6 +52,7 @@ def generate_discography():
             name,
             release_date,
             spotify_url,
+            qr_code_url,
             duration,
             image_large_uri,
             image_medium_uri,
@@ -110,6 +113,14 @@ def generate_discography():
                 color: #666;
                 font-size: 0.9em;
             }
+            .qr-link {
+                color: #666;
+                font-size: 0.9em;
+                margin-left: 10px;
+            }
+            .qr-link:hover {
+                color: #000;
+            }
         </style>
     </head>
     <body>
@@ -121,7 +132,7 @@ def generate_discography():
                     <th>Track</th>
                     <th>Release Date</th>
                     <th>Duration</th>
-                    <th>Images</th>
+                    <th>Links</th>
                 </tr>
             </thead>
             <tbody>
@@ -130,7 +141,7 @@ def generate_discography():
     # Process albums
     current_album_id = None
     for row in albums:
-        album_id, album_name, release_date, spotify_url, album_type, large_img, medium_img, thumb_img, track_name, track_num, track_url, duration = row
+        album_id, album_name, release_date, spotify_url, album_type, qr_url, large_img, medium_img, thumb_img, track_name, track_num, track_url, track_qr_url, duration = row
         
         if album_id != current_album_id:
             # New album header
@@ -149,6 +160,7 @@ def generate_discography():
             <a href="{large_img}" target="_blank">640x640</a> |
             <a href="{medium_img}" target="_blank">300x300</a> |
             <a href="{thumb_img}" target="_blank">64x64</a>
+            <a href="{qr_url}" target="_blank" class="qr-link">QR Code</a>
         </td>
     </tr>"""
             current_album_id = album_id
@@ -162,12 +174,12 @@ def generate_discography():
         <td><a href="{track_url}" target="_blank">{track_name}</a></td>
         <td></td>
         <td class="duration">{duration}</td>
-        <td></td>
+        <td><a href="{track_qr_url}" target="_blank" class="qr-link">QR Code</a></td>
     </tr>"""
     
     # Process singles
     for row in singles:
-        song_id, name, release_date, spotify_url, duration, large_img, medium_img, thumb_img = row
+        song_id, name, release_date, spotify_url, qr_url, duration, large_img, medium_img, thumb_img = row
         html += f"""
     <tr class="main-row">
         <td>
@@ -183,6 +195,7 @@ def generate_discography():
             <a href="{large_img}" target="_blank">640x640</a> |
             <a href="{medium_img}" target="_blank">300x300</a> |
             <a href="{thumb_img}" target="_blank">64x64</a>
+            <a href="{qr_url}" target="_blank" class="qr-link">QR Code</a>
         </td>
     </tr>"""
     

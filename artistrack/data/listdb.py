@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-from model import get_db_path
+from artistrack.data.model import get_db_path
 
 def list_db_contents():
     """List all rows from both albums and songs tables"""
@@ -16,20 +16,28 @@ def list_db_contents():
     try:
         print("\n=== ALBUMS ===")
         print("-" * 80)
+        
+        # Get all albums
         cursor.execute('''
             SELECT * FROM albums 
             ORDER BY release_date DESC
         ''')
+        albums = cursor.fetchall()
         
-        for row in cursor.fetchall():
-            print(f"Album: {row['name']}")
-            print(f"Release Date: {row['release_date']}")
-            print(f"Track Count: {row['track_count']}")
-            print(f"Spotify URL: {row['spotify_url']}")
-            print("-" * 80)
+        if not albums:
+            print("No albums found")
+        else:
+            for album in albums:
+                print(f"Album: {album['name']}")
+                print(f"Release Date: {album['release_date']}")
+                print(f"Track Count: {album['track_count']}")
+                print(f"Spotify URL: {album['spotify_url']}")
+                print("-" * 80)
         
         print("\n=== SONGS ===")
         print("-" * 80)
+        
+        # Get all songs
         cursor.execute('''
             SELECT 
                 s.*,
@@ -41,14 +49,18 @@ def list_db_contents():
             LEFT JOIN albums a ON s.album_id = a.album_id
             ORDER BY s.release_date DESC, s.track_number
         ''')
+        songs = cursor.fetchall()
         
-        for row in cursor.fetchall():
-            print(f"Track: {row['name']}")
-            print(f"Release Date: {row['release_date']}")
-            print(f"Duration: {row['duration']}")
-            print(f"{'Single' if row['is_single'] else 'Album Track'} - Album: {row['album_name']}")
-            print(f"Spotify URL: {row['spotify_url']}")
-            print("-" * 80)
+        if not songs:
+            print("No songs found")
+        else:
+            for song in songs:
+                print(f"Track: {song['name']}")
+                print(f"Release Date: {song['release_date']}")
+                print(f"Duration: {song['duration']}")
+                print(f"{'Single' if song['is_single'] else 'Album Track'} - Album: {song['album_name']}")
+                print(f"Spotify URL: {song['spotify_url']}")
+                print("-" * 80)
             
     except Exception as e:
         print(f"Error listing database contents: {e}")

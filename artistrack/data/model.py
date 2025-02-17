@@ -40,6 +40,7 @@ class Album:
     track_count: int
     spotify_url: str
     spotify_uri: str
+    qr_code_url: str
     album_type: str
     image_large_uri: str
     image_medium_uri: str
@@ -56,6 +57,7 @@ class Song:
     duration: str
     spotify_url: str
     spotify_uri: str
+    qr_code_url: str
     is_single: bool
     image_large_uri: str
     image_medium_uri: str
@@ -79,21 +81,23 @@ def get_db_path():
     data_dir = Path(__file__).parent
     return data_dir / 'artistrack.db'
 
-def recreate_db():
+def recreate_db(db_path=None):
     """Drop and recreate the database and all tables"""
-    db_path = get_db_path()
+    if db_path is None:
+        db_path = get_db_path()
     
     # Remove existing database if it exists
     if db_path.exists():
         db_path.unlink()
     
     # Create new database and tables
-    init_db()
+    init_db(db_path)
     print(f"Database recreated at {db_path}")
 
-def init_db():
+def init_db(db_path=None):
     """Initialize the SQLite database and create tables if they don't exist"""
-    db_path = get_db_path()
+    if db_path is None:
+        db_path = get_db_path()
     
     # Create parent directory if it doesn't exist
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,6 +114,7 @@ def init_db():
             release_date TEXT NOT NULL,
             spotify_url TEXT NOT NULL,
             spotify_uri TEXT NOT NULL,
+            qr_code_url TEXT NOT NULL,
             track_count INTEGER NOT NULL,
             album_type TEXT NOT NULL,
             image_large_uri TEXT NOT NULL,
@@ -130,6 +135,7 @@ def init_db():
             duration TEXT NOT NULL,  -- stored as "M:SS" format
             spotify_url TEXT NOT NULL,
             spotify_uri TEXT NOT NULL,
+            qr_code_url TEXT NOT NULL,
             is_single BOOLEAN NOT NULL,
             image_large_uri TEXT NOT NULL,
             image_medium_uri TEXT NOT NULL,

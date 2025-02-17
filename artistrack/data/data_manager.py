@@ -31,6 +31,7 @@ class DataManager:
             track_count=album_data['total_tracks'],
             spotify_url=album_data['external_urls']['spotify'],
             spotify_uri=album_data['uri'],
+            qr_code_url=f"https://scannables.scdn.co/uri/plain/png/ffffff/black/640/{album_data['uri']}",
             album_type=album_data['album_type'],
             image_large_uri=album_data['images'][0]['url'],
             image_medium_uri=album_data['images'][1]['url'],
@@ -41,13 +42,14 @@ class DataManager:
         cursor.execute('''
             INSERT OR REPLACE INTO albums (
                 album_id, name, release_date, track_count, spotify_url,
-                spotify_uri, album_type, image_large_uri, image_medium_uri,
-                image_thumb_uri
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                spotify_uri, qr_code_url, album_type, image_large_uri, 
+                image_medium_uri, image_thumb_uri
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             album.album_id, album.name, album.release_date, album.track_count,
-            album.spotify_url, album.spotify_uri, album.album_type,
-            album.image_large_uri, album.image_medium_uri, album.image_thumb_uri
+            album.spotify_url, album.spotify_uri, album.qr_code_url,
+            album.album_type, album.image_large_uri, album.image_medium_uri,
+            album.image_thumb_uri
         ))
         
         conn.commit()
@@ -76,6 +78,7 @@ class DataManager:
             duration=duration,
             spotify_url=song_data['external_urls']['spotify'],
             spotify_uri=song_data['uri'],
+            qr_code_url=f"https://scannables.scdn.co/uri/plain/png/ffffff/black/640/{song_data['uri']}",
             is_single=album_id is None,  # True if not part of an album
             image_large_uri=song_data['images'][0]['url'] if 'images' in song_data else '',
             image_medium_uri=song_data['images'][1]['url'] if 'images' in song_data else '',
@@ -86,14 +89,15 @@ class DataManager:
         cursor.execute('''
             INSERT OR REPLACE INTO songs (
                 song_id, album_id, name, release_date, track_number,
-                duration_ms, duration, spotify_url, spotify_uri, is_single,
-                image_large_uri, image_medium_uri, image_thumb_uri
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                duration_ms, duration, spotify_url, spotify_uri, qr_code_url,
+                is_single, image_large_uri, image_medium_uri, image_thumb_uri
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             song.song_id, song.album_id, song.name, song.release_date,
             song.track_number, song.duration_ms, song.duration,
-            song.spotify_url, song.spotify_uri, song.is_single,
-            song.image_large_uri, song.image_medium_uri, song.image_thumb_uri
+            song.spotify_url, song.spotify_uri, song.qr_code_url,
+            song.is_single, song.image_large_uri, song.image_medium_uri,
+            song.image_thumb_uri
         ))
         
         conn.commit()
@@ -106,11 +110,25 @@ class DataManager:
         cursor = conn.cursor()
         
         # Get all albums
-        cursor.execute('SELECT * FROM albums ORDER BY release_date DESC')
+        cursor.execute('''
+            SELECT 
+                album_id, name, release_date, track_count, spotify_url,
+                spotify_uri, qr_code_url, album_type, image_large_uri,
+                image_medium_uri, image_thumb_uri
+            FROM albums 
+            ORDER BY release_date DESC
+        ''')
         albums = [Album(*row) for row in cursor.fetchall()]
         
         # Get all songs
-        cursor.execute('SELECT * FROM songs ORDER BY release_date DESC')
+        cursor.execute('''
+            SELECT 
+                song_id, album_id, name, release_date, track_number,
+                duration_ms, duration, spotify_url, spotify_uri, qr_code_url,
+                is_single, image_large_uri, image_medium_uri, image_thumb_uri
+            FROM songs 
+            ORDER BY release_date DESC
+        ''')
         songs = [Song(*row) for row in cursor.fetchall()]
         
         conn.close()
