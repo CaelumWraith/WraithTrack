@@ -2,6 +2,10 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime
 
+def get_db_path():
+    """Get the path to the database file"""
+    return Path(__file__).parent.parent / 'data' / 'artistrack.db'
+
 def format_date(date_str):
     """Convert YYYY-MM-DD to Month DD, YYYY format"""
     date_obj = datetime.strptime(date_str, '%Y-%m-%d')
@@ -10,7 +14,8 @@ def format_date(date_str):
 def generate_discography():
     """Generate discography HTML from the database"""
     
-    db_path = Path('data') / 'wraith.db'
+    # Get database path
+    db_path = get_db_path()
     
     # Connect to database
     conn = sqlite3.connect(db_path)
@@ -189,7 +194,7 @@ def generate_discography():
     """
     
     # Write the HTML file
-    output_path = Path('disco') / 'discography.html'
+    output_path = Path(__file__).parent / 'discography.html'
     output_path.parent.mkdir(exist_ok=True)
     
     with open(output_path, 'w', encoding='utf-8') as f:
@@ -200,4 +205,4 @@ def generate_discography():
     conn.close()
 
 if __name__ == "__main__":
-    generate_discography() 
+    generate_discography()

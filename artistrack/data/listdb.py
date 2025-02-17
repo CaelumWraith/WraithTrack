@@ -1,11 +1,12 @@
 import sqlite3
 from pathlib import Path
+from model import get_db_path
 
 def list_db_contents():
     """List all rows from both albums and songs tables"""
     
     # Connect to database
-    db_path = Path('data') / 'wraith.db'
+    db_path = get_db_path()
     conn = sqlite3.connect(db_path)
     
     # Set row factory to get dictionary-like results

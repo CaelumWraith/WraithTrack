@@ -5,11 +5,15 @@ import requests
 from io import BytesIO
 import textwrap
 
-def create_story(song_title):
+def get_db_path():
+    """Get the path to the database file"""
+    return Path(__file__).parent.parent / 'data' / 'artistrack.db'
+
+def create_story(song_title, output_dir=None):
     """Create an Instagram story for a given song title"""
     
     # Connect to database
-    db_path = Path('data') / 'wraith.db'
+    db_path = get_db_path()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -64,13 +68,14 @@ def create_story(song_title):
     draw = ImageDraw.Draw(story)
     
     # Load fonts
+    fonts_dir = Path(__file__).parent / 'fonts'
     try:
-        title_font = ImageFont.truetype('stories/fonts/Game Of Squids.ttf', 120)
-        info_font = ImageFont.truetype('stories/fonts/federalescort.ttf', 45)
-        link_font = ImageFont.truetype('stories/fonts/federalescort.ttf', 30)
+        title_font = ImageFont.truetype(str(fonts_dir / 'Game Of Squids.ttf'), 120)
+        info_font = ImageFont.truetype(str(fonts_dir / 'federalescort.ttf'), 45)
+        link_font = ImageFont.truetype(str(fonts_dir / 'federalescort.ttf'), 30)
     except OSError as e:
         print(f"Font error: {e}")
-        print("Please ensure fonts are in the stories/fonts directory")
+        print(f"Please ensure fonts are in {fonts_dir}")
         return
     
     # Add song title with more space at top
@@ -94,7 +99,10 @@ def create_story(song_title):
               font=link_font, fill='white', anchor='mm')
     
     # Save the story
-    output_dir = Path('stories')
+    if output_dir is None:
+        output_dir = Path.cwd()
+    else:
+        output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True)
     
     safe_title = "".join(c for c in name if c.isalnum() or c in (' ', '-', '_')).strip()
@@ -106,6 +114,7 @@ def create_story(song_title):
     print(f"Created story at {output_path}")
     
     conn.close()
+    return output_path
 
 if __name__ == "__main__":
     import sys

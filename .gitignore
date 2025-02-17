@@ -1,7 +1,6 @@
 *.sh
 .envrc
 bearer*
-data
 
 # Ignore generated files
 *.pyc
