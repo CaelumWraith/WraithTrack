@@ -1,0 +1,54 @@
+---
+# Story Image Configuration
+image:
+  # Base image dimensions
+  width: 1080
+  height: 1300
+  background_color: "black"
+  
+  # Artwork configuration
+  artwork:
+    padding: 100  # padding on each side
+    vertical_offset: -20  # upward shift
+    overlay:
+      color: [0, 0, 0]  # RGB values
+      opacity: 128  # 0-255, where 255 is fully opaque
+      
+# QR Code configuration
+qr_code:
+  spotify:
+    base_url: "https://scannables.scdn.co/uri/plain/png"
+    foreground: "000000"  # white
+    background: "white"
+    size: 300
+    vertical_offset: 120  # distance below artwork
+    invert_colors: false
+
+# Text configuration
+text:
+  title:
+    font:
+      name: "Game Of Squids.ttf"
+      size: 120
+    vertical_offset: -100  # space above artwork
+    shadow:
+      enabled: true
+      offset: 3
+      color: "#333333"
+    color: "white"
+    
+  info:
+    font:
+      name: "federalescort.ttf"
+      size: 45
+    color: "white"
+    
+  link:
+    font:
+      name: "federalescort.ttf"
+      size: 30
+    color: "#cccccc"
+    
+  streaming:
+    text: "NOW STREAMING\nhttps:\/\/caelumwraith.com"
+    vertical_offset: 80  # distance below artwork
