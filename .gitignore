@@ -44,3 +44,4 @@ discography.html
 .envrc
 spottest.sh
 .venv
+*bearer_token.json
