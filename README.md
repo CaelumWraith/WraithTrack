@@ -4,11 +4,11 @@ ArtisTrack is a Python-based tool for tracking and managing artist discographies
 
 ## Features
 
-- Spotify artist data fetching and management
-- Local SQLite database for storing artist discographies
-- Automatic Instagram story generation for music updates
-- Support for album and track metadata
-- Beautiful visualization of music data
+- **Spotify Integration**: Seamlessly fetch and manage artist data from Spotify
+- **Discography Management**: Local SQLite database for storing and tracking artist releases
+- **Story Generation**: Create beautiful Instagram stories for music updates
+- **Customizable Design**: Configurable story layouts, fonts, colors, and QR codes
+- **Automated Updates**: Track and showcase new releases automatically
 
 ## Prerequisites
 
@@ -38,28 +38,51 @@ SPOTIFY_CLIENT_SECRET=your_client_secret
 
 ## Usage
 
-### Basic Usage
+### Running the Application
 
-1. Initialize the database:
+Start the application:
 ```bash
-python -m artistrack.artistrack --init-db
+python run-web.py
 ```
 
-2. Fetch artist data and populate the database:
-```bash
-python -m artistrack.artistrack --populate
+### Story Generation
+
+1. **Story Builder**:
+   - Select a song from your discography
+   - Customize the story design (colors, fonts, layout)
+   - Preview and generate the story
+   - Save to your preferred location
+
+2. **Configuration**:
+   - Adjust image dimensions and background colors
+   - Customize QR code appearance
+   - Configure text styles and positions
+   - Set streaming text and alignment
+
+### Story Configuration
+
+The story generator supports extensive customization through `config.yaml`:
+
+```yaml
+image:
+  width: 1080
+  height: 1300
+  background_color: '#000000'
+  artwork:
+    padding: 100
+    vertical_offset: -20
+
+text:
+  title:
+    font:
+      name: 'Game Of Squids.ttf'
+      size: 100
+    alignment: 'center'
+  
+  streaming:
+    text: 'NOW STREAMING'
+    alignment: 'right'
 ```
-
-3. Generate Instagram stories:
-```bash
-python -m artistrack.artistrack --generate-story
-```
-
-### Advanced Options
-
-- Use `--verbose` flag for detailed logging
-- Use `--recreate-db` to reset the database
-- Use `--help` to see all available options
 
 ## Project Structure
 
@@ -67,6 +90,8 @@ python -m artistrack.artistrack --generate-story
   - `data/` - Database management and data models
   - `discotech/` - Spotify API integration
   - `storybuilder/` - Instagram story generation
+    - `fonts/` - Custom fonts for story text
+    - `config.yaml` - Story design configuration
 
 ## Testing
 
@@ -83,10 +108,11 @@ pytest --cov=artistrack
 ## Dependencies
 
 - pillow - Image processing
+- streamlit - Web interface
 - pytest - Testing framework
 - requests - HTTP client
 - python-dotenv - Environment variable management
-- beautifulsoup4 - HTML parsing
+- pyyaml - Configuration management
 
 ## Contributing
 
