@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.4, pytest-8.3.4, pluggy-1.5.0 -- /Users/edward/.pyenv/versions/3.12.4/bin/python3.12
+cachedir: .pytest_cache
+rootdir: /Users/edward/Documents/GitHub/WraithTrack
+configfile: pytest.ini
+plugins: cov-6.0.0, anyio-4.8.0, mock-3.14.0
+collecting ... /Users/edward/.pyenv/versions/3.12.4/lib/python3.12/site-packages/coverage/inorout.py:508: CoverageWarning: Module artistrack was never imported. (module-not-imported)
+  self.warn(f"Module {pkg} was never imported.", slug="module-not-imported")
+/Users/edward/.pyenv/versions/3.12.4/lib/python3.12/site-packages/coverage/control.py:892: CoverageWarning: No data was collected. (no-data-collected)
+  self._warn("No data was collected.", slug="no-data-collected")
+/Users/edward/.pyenv/versions/3.12.4/lib/python3.12/site-packages/pytest_cov/plugin.py:341: CovReportWarning: Failed to generate report: No data to report.
+
+  warnings.warn(CovReportWarning(message), stacklevel=1)
+collected 0 items
+
+WARNING: Failed to generate report: No data to report.
+
+
+
+---------- coverage: platform darwin, python 3.12.4-final-0 ----------
+
+============================ no tests ran in 0.03s =============================

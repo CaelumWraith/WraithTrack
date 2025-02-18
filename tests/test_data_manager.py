@@ -5,6 +5,42 @@ from artistrack.data.model import Album, Song, Discography, init_db
 from datetime import datetime
 import sqlite3
 
+@pytest.fixture
+def mock_spotify_response():
+    return {
+        'id': 'test_album_id',
+        'name': 'Test Album',
+        'release_date': '2025-01-01',
+        'total_tracks': 12,
+        'external_urls': {'spotify': 'https://spotify/album'},
+        'uri': 'spotify:album:test',
+        'album_type': 'album',
+        'artists': [{'id': 'test_artist_id', 'name': 'Test Artist'}],
+        'images': [
+            {'url': 'https://img/large'},
+            {'url': 'https://img/medium'},
+            {'url': 'https://img/thumb'}
+        ]
+    }
+
+@pytest.fixture
+def mock_track_response():
+    return {
+        'id': 'test_track_id',
+        'name': 'Test Track',
+        'release_date': '2025-01-01',
+        'track_number': 1,
+        'duration_ms': 180000,
+        'external_urls': {'spotify': 'https://spotify/track'},
+        'uri': 'spotify:track:test',
+        'artists': [{'id': 'test_artist_id', 'name': 'Test Artist'}],
+        'images': [
+            {'url': 'https://img/large'},
+            {'url': 'https://img/medium'},
+            {'url': 'https://img/thumb'}
+        ]
+    }
+
 def test_save_album(test_db_path, mock_spotify_response):
     """Test saving an album to the database"""
     data_manager = DataManager()
@@ -16,6 +52,7 @@ def test_save_album(test_db_path, mock_spotify_response):
     # Verify album data
     assert isinstance(album, Album)
     assert album.album_id == mock_spotify_response["id"]
+    assert album.artist_id == mock_spotify_response["artists"][0]["id"]
     assert album.name == mock_spotify_response["name"]
     assert album.spotify_uri == mock_spotify_response["uri"]
     assert album.qr_code_url == f"https://scannables.scdn.co/uri/plain/png/ffffff/black/640/{mock_spotify_response['uri']}"
@@ -31,6 +68,7 @@ def test_save_song(test_db_path, mock_track_response):
     # Verify song data
     assert isinstance(song, Song)
     assert song.song_id == mock_track_response["id"]
+    assert song.artist_id == mock_track_response["artists"][0]["id"]
     assert song.name == mock_track_response["name"]
     assert song.spotify_uri == mock_track_response["uri"]
     assert song.qr_code_url == f"https://scannables.scdn.co/uri/plain/png/ffffff/black/640/{mock_track_response['uri']}"
@@ -48,6 +86,7 @@ def test_save_single(test_db_path, mock_track_response):
     # Verify song data
     assert isinstance(song, Song)
     assert song.song_id == mock_track_response["id"]
+    assert song.artist_id == mock_track_response["artists"][0]["id"]
     assert song.album_id is None
     assert song.is_single
 
@@ -136,6 +175,7 @@ def test_get_song_by_title(test_db_path, mock_track_response):
         CREATE TABLE IF NOT EXISTS songs (
             song_id TEXT PRIMARY KEY,
             album_id TEXT,
+            artist_id TEXT NOT NULL,
             name TEXT NOT NULL,
             release_date TEXT NOT NULL,
             track_number INTEGER,
@@ -147,7 +187,8 @@ def test_get_song_by_title(test_db_path, mock_track_response):
             is_single BOOLEAN NOT NULL,
             image_large_uri TEXT NOT NULL,
             image_medium_uri TEXT NOT NULL,
-            image_thumb_uri TEXT NOT NULL
+            image_thumb_uri TEXT NOT NULL,
+            FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
         )
     ''')
     
@@ -169,6 +210,7 @@ def test_get_song_by_title(test_db_path, mock_track_response):
     assert found_song is not None
     assert found_song.song_id == 'test_song'
     assert found_song.name == 'Test Song Title'
+    assert found_song.artist_id == 'test_artist_id'
     
     # Test case insensitive search
     found_song = data_manager.get_song_by_title('TEST SONG TITLE')
@@ -211,40 +253,55 @@ def test_cleanup_old_files(test_db_path, tmp_path, monkeypatch):
 
 def test_database_initialization(tmp_path):
     """Test database initialization"""
-    # Set up test path
-    db_path = tmp_path / "test.db"
+    # Create test database path
+    test_db_path = tmp_path / "test.db"
     
-    # Create data manager with test path
-    data_manager = DataManager()
-    data_manager.get_db_path = lambda: db_path
+    # Initialize database
+    init_db(test_db_path)
     
-    # Get connection (should create database)
-    conn = data_manager.get_connection()
+    # Verify database was created
+    assert test_db_path.exists()
     
-    # Verify tables exist
+    # Connect to database and check tables
+    conn = sqlite3.connect(test_db_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    tables = [row[0] for row in cursor.fetchall()]
     
-    assert "albums" in tables
-    assert "songs" in tables
+    # Check artists table
+    cursor.execute("PRAGMA table_info(artists)")
+    artist_columns = [col[1] for col in cursor.fetchall()]
+    assert all(col in artist_columns for col in [
+        "artist_id", "name", "spotify_url", "image_large_uri",
+        "image_medium_uri", "image_thumb_uri", "followers"
+    ])
     
-    # Verify table schemas
+    # Check albums table
     cursor.execute("PRAGMA table_info(albums)")
-    album_columns = {row[1] for row in cursor.fetchall()}
+    album_columns = [col[1] for col in cursor.fetchall()]
     assert all(col in album_columns for col in [
-        "album_id", "name", "release_date", "spotify_url", "spotify_uri",
-        "qr_code_url", "track_count", "album_type", "image_large_uri",
+        "album_id", "artist_id", "name", "release_date", "spotify_url",
+        "spotify_uri", "qr_code_url", "track_count", "album_type",
+        "image_large_uri", "image_medium_uri", "image_thumb_uri"
+    ])
+    
+    # Check songs table
+    cursor.execute("PRAGMA table_info(songs)")
+    song_columns = [col[1] for col in cursor.fetchall()]
+    assert all(col in song_columns for col in [
+        "song_id", "album_id", "artist_id", "name", "release_date",
+        "track_number", "duration_ms", "duration", "spotify_url",
+        "spotify_uri", "qr_code_url", "is_single", "image_large_uri",
         "image_medium_uri", "image_thumb_uri"
     ])
     
-    cursor.execute("PRAGMA table_info(songs)")
-    song_columns = {row[1] for row in cursor.fetchall()}
-    assert all(col in song_columns for col in [
-        "song_id", "album_id", "name", "release_date", "track_number",
-        "duration_ms", "duration", "spotify_url", "spotify_uri", "qr_code_url",
-        "is_single", "image_large_uri", "image_medium_uri", "image_thumb_uri"
-    ])
+    # Check foreign key constraints
+    cursor.execute("PRAGMA foreign_key_list(albums)")
+    album_fks = cursor.fetchall()
+    assert any(fk[3] == "artist_id" and fk[2] == "artists" for fk in album_fks)
+    
+    cursor.execute("PRAGMA foreign_key_list(songs)")
+    song_fks = cursor.fetchall()
+    assert any(fk[3] == "album_id" and fk[2] == "albums" for fk in song_fks)
+    assert any(fk[3] == "artist_id" and fk[2] == "artists" for fk in song_fks)
     
     conn.close()
 
@@ -268,7 +325,8 @@ def test_database_connection_error(tmp_path, monkeypatch):
             album_type TEXT NOT NULL,
             image_large_uri TEXT NOT NULL,
             image_medium_uri TEXT NOT NULL,
-            image_thumb_uri TEXT NOT NULL
+            image_thumb_uri TEXT NOT NULL,
+            artist_id TEXT NOT NULL
         )
     ''')
     conn.commit()
@@ -298,7 +356,8 @@ def test_database_connection_error(tmp_path, monkeypatch):
                 {'url': 'https://img/large'},
                 {'url': 'https://img/medium'},
                 {'url': 'https://img/thumb'}
-            ]
+            ],
+            'artists': [{'id': 'test_artist_id', 'name': 'Test Artist'}]
         })
     
     assert "readonly database" in str(exc_info.value).lower()
@@ -345,7 +404,8 @@ def test_database_query_error(test_db_path, monkeypatch):
                 {'url': 'https://img/large'},
                 {'url': 'https://img/medium'},
                 {'url': 'https://img/thumb'}
-            ]
+            ],
+            'artists': [{'id': 'test_artist_id', 'name': 'Test Artist'}]
         })
     
     assert "no such column" in str(exc_info.value).lower()

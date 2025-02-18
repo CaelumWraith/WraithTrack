@@ -10,20 +10,33 @@ import random
 # ddl for albums table
 album_table_ddl = """CREATE TABLE albums (
      album_id INTEGER PRIMARY KEY AUTOINCREMENT,
+     artist_id TEXT NOT NULL,
      name TEXT NOT NULL,
      release_date DATE NOT NULL,
      track_count INTEGER NOT NULL,
      spotify_url TEXT NOT NULL,
      image_large_uri TEXT NOT NULL,
      image_medium_uri TEXT NOT NULL,
-     image_thumb_uri TEXT NOT NULL);"""
+     image_thumb_uri TEXT NOT NULL,
+     FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
+);"""
 
-
+# ddl for artist table
+artist_table_ddl = """CREATE TABLE artists (
+    artist_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    spotify_url TEXT,
+    image_large_uri TEXT,
+    image_medium_uri TEXT,
+    image_thumb_uri TEXT,
+    followers INTEGER
+);"""
 
 # ddl for songs table
 song_table_ddl= """CREATE TABLE songs (
      song_id INTEGER PRIMARY KEY AUTOINCREMENT,
      album_id INTEGER NOT NULL,
+     artist_id TEXT NOT NULL,
      name TEXT NOT NULL,
      release_date DATE NOT NULL,
      track_number INTEGER,
@@ -33,11 +46,14 @@ song_table_ddl= """CREATE TABLE songs (
      image_large_uri TEXT NOT NULL,
      image_medium_uri TEXT NOT NULL,
      image_thumb_uri TEXT NOT NULL,
-     FOREIGN KEY (album_id) REFERENCES albums(album_id));"""
+     FOREIGN KEY (album_id) REFERENCES albums(album_id),
+     FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
+);"""
 
 @dataclasses.dataclass
 class Album:
     album_id: str
+    artist_id: str
     name: str
     release_date: str
     track_count: int
@@ -53,6 +69,7 @@ class Album:
 class Song:
     song_id: str
     album_id: str
+    artist_id: str
     name: str
     release_date: str
     track_number: int
@@ -73,7 +90,13 @@ class Discography:
 
 @dataclasses.dataclass
 class Artist:
+    artist_id: str
     name: str
+    spotify_url: str
+    image_large_uri: str
+    image_medium_uri: str
+    image_thumb_uri: str
+    followers: int
     discography: Discography
     songs: list[Song]
     albums: list[Album]
@@ -102,10 +125,24 @@ def init_db(db_path=None):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
+    # Create artists table if it doesn't exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS artists (
+            artist_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            spotify_url TEXT,
+            image_large_uri TEXT,
+            image_medium_uri TEXT,
+            image_thumb_uri TEXT,
+            followers INTEGER
+        )
+    ''')
+    
     # Create albums table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS albums (
             album_id TEXT PRIMARY KEY,
+            artist_id TEXT NOT NULL,
             name TEXT NOT NULL,
             release_date TEXT NOT NULL,
             spotify_url TEXT NOT NULL,
@@ -115,7 +152,8 @@ def init_db(db_path=None):
             album_type TEXT NOT NULL,
             image_large_uri TEXT NOT NULL,
             image_medium_uri TEXT NOT NULL,
-            image_thumb_uri TEXT NOT NULL
+            image_thumb_uri TEXT NOT NULL,
+            FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
         )
     ''')
     
@@ -124,6 +162,7 @@ def init_db(db_path=None):
         CREATE TABLE IF NOT EXISTS songs (
             song_id TEXT PRIMARY KEY,
             album_id TEXT,
+            artist_id TEXT NOT NULL,
             name TEXT NOT NULL,
             release_date TEXT NOT NULL,
             track_number INTEGER,
@@ -136,7 +175,8 @@ def init_db(db_path=None):
             image_large_uri TEXT NOT NULL,
             image_medium_uri TEXT NOT NULL,
             image_thumb_uri TEXT NOT NULL,
-            FOREIGN KEY (album_id) REFERENCES albums(album_id)
+            FOREIGN KEY (album_id) REFERENCES albums(album_id),
+            FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
         )
     ''')
     

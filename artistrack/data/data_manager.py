@@ -26,6 +26,7 @@ class DataManager:
         # Extract album data
         album = Album(
             album_id=album_data['id'],
+            artist_id=album_data['artists'][0]['id'],  # Get first artist's ID
             name=album_data['name'],
             release_date=album_data['release_date'],
             track_count=album_data['total_tracks'],
@@ -41,12 +42,12 @@ class DataManager:
         # Insert album data
         cursor.execute('''
             INSERT OR REPLACE INTO albums (
-                album_id, name, release_date, track_count, spotify_url,
+                album_id, artist_id, name, release_date, track_count, spotify_url,
                 spotify_uri, qr_code_url, album_type, image_large_uri, 
                 image_medium_uri, image_thumb_uri
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            album.album_id, album.name, album.release_date, album.track_count,
+            album.album_id, album.artist_id, album.name, album.release_date, album.track_count,
             album.spotify_url, album.spotify_uri, album.qr_code_url,
             album.album_type, album.image_large_uri, album.image_medium_uri,
             album.image_thumb_uri
@@ -71,6 +72,7 @@ class DataManager:
         song = Song(
             song_id=song_data['id'],
             album_id=album_id,
+            artist_id=song_data['artists'][0]['id'],  # Get first artist's ID
             name=song_data['name'],
             release_date=song_data.get('release_date', ''),  # May be None for album tracks
             track_number=song_data.get('track_number'),
@@ -88,12 +90,12 @@ class DataManager:
         # Insert song data
         cursor.execute('''
             INSERT OR REPLACE INTO songs (
-                song_id, album_id, name, release_date, track_number,
+                song_id, album_id, artist_id, name, release_date, track_number,
                 duration_ms, duration, spotify_url, spotify_uri, qr_code_url,
                 is_single, image_large_uri, image_medium_uri, image_thumb_uri
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            song.song_id, song.album_id, song.name, song.release_date,
+            song.song_id, song.album_id, song.artist_id, song.name, song.release_date,
             song.track_number, song.duration_ms, song.duration,
             song.spotify_url, song.spotify_uri, song.qr_code_url,
             song.is_single, song.image_large_uri, song.image_medium_uri,
@@ -112,7 +114,7 @@ class DataManager:
         # Get all albums
         cursor.execute('''
             SELECT 
-                album_id, name, release_date, track_count, spotify_url,
+                album_id, artist_id, name, release_date, track_count, spotify_url,
                 spotify_uri, qr_code_url, album_type, image_large_uri,
                 image_medium_uri, image_thumb_uri
             FROM albums 
@@ -123,7 +125,7 @@ class DataManager:
         # Get all songs
         cursor.execute('''
             SELECT 
-                song_id, album_id, name, release_date, track_number,
+                song_id, album_id, artist_id, name, release_date, track_number,
                 duration_ms, duration, spotify_url, spotify_uri, qr_code_url,
                 is_single, image_large_uri, image_medium_uri, image_thumb_uri
             FROM songs 
