@@ -1,54 +1,51 @@
----
-# Story Image Configuration
 image:
-  # Base image dimensions
   width: 1080
   height: 1300
-  background_color: "black"
-  
-  # Artwork configuration
+  background_color: '#000000'
   artwork:
-    padding: 100  # padding on each side
-    vertical_offset: -20  # upward shift
+    padding: 100
+    vertical_offset: -20
     overlay:
-      color: [0, 0, 0]  # RGB values
-      opacity: 128  # 0-255, where 255 is fully opaque
-      
-# QR Code configuration
+      color:
+      - 0
+      - 0
+      - 0
+      opacity: 128
 qr_code:
   spotify:
-    base_url: "https://scannables.scdn.co/uri/plain/png"
-    foreground: "000000"  # white
-    background: "white"
+    base_url: https://scannables.scdn.co/uri/plain/png
+    foreground: '#ffffff'
+    background: black
     size: 300
-    vertical_offset: 120  # distance below artwork
+    vertical_offset: 120
     invert_colors: false
-
-# Text configuration
 text:
   title:
     font:
-      name: "Game Of Squids.ttf"
-      size: 120
-    vertical_offset: -100  # space above artwork
+      name: Game Of Squids.ttf
+      size: 100
+    vertical_offset: -100
+    alignment: center
     shadow:
       enabled: true
       offset: 3
-      color: "#333333"
-    color: "white"
-    
+      color: '#333333'
+    color: '#ffffff'
   info:
     font:
-      name: "federalescort.ttf"
+      name: federalescort.ttf
       size: 45
-    color: "white"
-    
+    alignment: center
+    color: '#ffffff'
   link:
     font:
-      name: "federalescort.ttf"
+      name: federalescort.ttf
       size: 30
-    color: "#cccccc"
-    
+    alignment: center
+    color: '#cccccc'
   streaming:
-    text: "NOW STREAMING\nhttps:\/\/caelumwraith.com"
-    vertical_offset: 80  # distance below artwork
+    text: 'NOW STREAMING
+
+      https://caelumwraith.com'
+    vertical_offset: 80
+    alignment: right

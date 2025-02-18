@@ -202,3 +202,150 @@ class SpotifyClient:
         except requests.exceptions.RequestException as e:
             print(f"Error fetching album tracks: {e}")
             sys.exit(1)
+
+    def get_track_stats(self, track_id, time_range=None):
+        """Get track play statistics from Spotify.
+        
+        Args:
+            track_id: Spotify track ID
+            time_range: Optional time range (short_term, medium_term, long_term)
+        """
+        # Get fresh token if needed
+        self.ensure_valid_token()
+        
+        # Build query parameters
+        params = {}
+        if time_range:
+            params['time_range'] = time_range
+        
+        # Get track stats
+        response = requests.get(
+            f"https://api.spotify.com/v1/me/tracks/{track_id}/stats",
+            headers={
+                'Authorization': f'Bearer {self.bearer_token}'
+            },
+            params=params
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Error getting track stats: {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
+
+    def get_track_plays(self, track_id, start_date=None, end_date=None):
+        """Get track play history from Spotify.
+        
+        Args:
+            track_id: Spotify track ID
+            start_date: Optional start date (YYYY-MM-DD)
+            end_date: Optional end date (YYYY-MM-DD)
+        """
+        # Get fresh token if needed
+        self.ensure_valid_token()
+        
+        # Build query parameters
+        params = {}
+        if start_date:
+            params['start_date'] = start_date
+        if end_date:
+            params['end_date'] = end_date
+        
+        # Get play history
+        response = requests.get(
+            f"https://api.spotify.com/v1/me/tracks/{track_id}/plays",
+            headers={
+                'Authorization': f'Bearer {self.bearer_token}'
+            },
+            params=params
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print(f"Error getting play history: {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
+
+    def get_track_popularity(self, track_id):
+        """Get track popularity from Spotify.
+        
+        Args:
+            track_id: Spotify track ID (can be full URI or just ID)
+        
+        Returns:
+            Dictionary containing popularity score (0-100) and other track details
+        """
+        # Extract ID from URI if needed
+        if track_id.startswith('spotify:track:'):
+            track_id = track_id.split(':')[-1]
+        
+        # Get fresh token if needed
+        self.ensure_valid_token()
+        
+        # Get track details including popularity
+        response = requests.get(
+            f"https://api.spotify.com/v1/tracks/{track_id}",
+            headers={
+                'Authorization': f'Bearer {self.bearer_token}'
+            }
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                'popularity': data.get('popularity', 0),  # 0-100 score
+                'preview_url': data.get('preview_url'),
+                'external_urls': data.get('external_urls', {}),
+                'available_markets': len(data.get('available_markets', [])),
+                'explicit': data.get('explicit', False),
+                'duration_ms': data.get('duration_ms', 0)
+            }
+        else:
+            print(f"Error getting track details: {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
+
+    def get_artist_top_tracks(self, artist_id=None):
+        """Get artist's top tracks from Spotify.
+        
+        Args:
+            artist_id: Optional artist ID (if None, uses the configured artist)
+        
+        Returns:
+            List of top tracks with popularity scores
+        """
+        # Get fresh token if needed
+        self.ensure_valid_token()
+        
+        # Use configured artist ID if none provided
+        if artist_id is None:
+            artist_id = self.artist_id
+        
+        # Get artist's top tracks
+        response = requests.get(
+            f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks",
+            headers={
+                'Authorization': f'Bearer {self.bearer_token}'
+            },
+            params={'market': 'US'}  # Use US market for consistency
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return [{
+                'id': track['id'],
+                'name': track['name'],
+                'popularity': track['popularity'],
+                'preview_url': track.get('preview_url'),
+                'external_urls': track.get('external_urls', {}),
+                'album': {
+                    'name': track['album']['name'],
+                    'release_date': track['album']['release_date']
+                } if 'album' in track else None
+            } for track in data.get('tracks', [])]
+        else:
+            print(f"Error getting top tracks: {response.status_code}")
+            print(f"Response: {response.text}")
+            return None
