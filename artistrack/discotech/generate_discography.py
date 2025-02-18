@@ -8,12 +8,34 @@ def get_db_path():
 
 def format_date(date_str):
     """Convert YYYY-MM-DD to Month DD, YYYY format"""
-    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-    return date_obj.strftime('%B %d, %Y')
-
-def generate_discography():
-    """Generate discography HTML from the database"""
+    if not date_str or not isinstance(date_str, str):
+        return "Unknown Date"
     
+    try:
+        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+        return date_obj.strftime('%B %d, %Y')
+    except ValueError:
+        # Try partial date formats
+        try:
+            if len(date_str) == 4:  # Just year
+                return date_str
+            elif len(date_str) == 7:  # Year and month
+                date_obj = datetime.strptime(date_str, '%Y-%m')
+                return date_obj.strftime('%B %Y')
+            else:
+                return "Invalid Date Format"
+        except ValueError:
+            return "Invalid Date Format"
+
+def generate_discography(output_dir=None):
+    """Generate discography HTML from the database.
+    
+    Args:
+        output_dir: Optional directory to save the file. If None, uses current directory.
+    
+    Returns:
+        Path object pointing to the generated HTML file.
+    """
     # Get database path
     db_path = get_db_path()
     
@@ -121,6 +143,12 @@ def generate_discography():
             .qr-link:hover {
                 color: #000;
             }
+            .empty-message {
+                text-align: center;
+                padding: 40px;
+                color: #666;
+                font-size: 1.2em;
+            }
         </style>
     </head>
     <body>
@@ -138,67 +166,75 @@ def generate_discography():
             <tbody>
     """
     
-    # Process albums
-    current_album_id = None
-    for row in albums:
-        album_id, album_name, release_date, spotify_url, album_type, qr_url, large_img, medium_img, thumb_img, track_name, track_num, track_url, track_qr_url, duration = row
+    if not albums and not singles:
+        html += """
+                <tr>
+                    <td colspan="6" class="empty-message">No albums found in database</td>
+                </tr>
+"""
+    else:
+        # Process albums
+        current_album_id = None
+        for row in albums:
+            album_id, album_name, release_date, spotify_url, album_type, qr_url, large_img, medium_img, thumb_img, track_name, track_num, track_url, track_qr_url, duration = row
+            
+            if album_id != current_album_id:
+                # New album header
+                html += f"""
+        <tr class="main-row">
+            <td>
+                <a href="{large_img}" target="_blank" class="thumbnail">
+                    <img src="{thumb_img}" width="64" height="64" alt="{album_name}">
+                </a>
+            </td>
+            <td>Album</td>
+            <td><a href="{spotify_url}" target="_blank">{album_name}</a></td>
+            <td>{format_date(release_date)}</td>
+            <td></td>
+            <td>
+                <a href="{large_img}" target="_blank">640x640</a> |
+                <a href="{medium_img}" target="_blank">300x300</a> |
+                <a href="{thumb_img}" target="_blank">64x64</a>
+                <a href="{qr_url}" target="_blank" class="qr-link">QR Code</a>
+            </td>
+        </tr>"""
+                current_album_id = album_id
+            
+            if track_name:
+                # Add track row
+                html += f"""
+        <tr class="track-row">
+            <td></td>
+            <td></td>
+            <td><a href="{track_url}" target="_blank">{track_name}</a></td>
+            <td></td>
+            <td class="duration">{duration}</td>
+            <td><a href="{track_qr_url}" target="_blank" class="qr-link">QR Code</a></td>
+        </tr>"""
         
-        if album_id != current_album_id:
-            # New album header
+        # Process singles
+        for row in singles:
+            song_id, name, release_date, spotify_url, qr_url, duration, large_img, medium_img, thumb_img = row
             html += f"""
-    <tr class="main-row">
-        <td>
-            <a href="{large_img}" target="_blank" class="thumbnail">
-                <img src="{thumb_img}" width="64" height="64" alt="{album_name}">
-            </a>
-        </td>
-        <td>Album</td>
-        <td><a href="{spotify_url}" target="_blank">{album_name}</a></td>
-        <td>{format_date(release_date)}</td>
-        <td></td>
-        <td>
-            <a href="{large_img}" target="_blank">640x640</a> |
-            <a href="{medium_img}" target="_blank">300x300</a> |
-            <a href="{thumb_img}" target="_blank">64x64</a>
-            <a href="{qr_url}" target="_blank" class="qr-link">QR Code</a>
-        </td>
-    </tr>"""
-            current_album_id = album_id
-        
-        if track_name:
-            # Add track row
-            html += f"""
-    <tr class="track-row">
-        <td></td>
-        <td></td>
-        <td><a href="{track_url}" target="_blank">{track_name}</a></td>
-        <td></td>
-        <td class="duration">{duration}</td>
-        <td><a href="{track_qr_url}" target="_blank" class="qr-link">QR Code</a></td>
-    </tr>"""
+        <tr class="main-row">
+            <td>
+                <a href="{large_img}" target="_blank" class="thumbnail">
+                    <img src="{thumb_img}" width="64" height="64" alt="{name}">
+                </a>
+            </td>
+            <td>Single</td>
+            <td><a href="{spotify_url}" target="_blank">{name}</a></td>
+            <td>{format_date(release_date)}</td>
+            <td class="duration">{duration}</td>
+            <td>
+                <a href="{large_img}" target="_blank">640x640</a> |
+                <a href="{medium_img}" target="_blank">300x300</a> |
+                <a href="{thumb_img}" target="_blank">64x64</a>
+                <a href="{qr_url}" target="_blank" class="qr-link">QR Code</a>
+            </td>
+        </tr>"""
     
-    # Process singles
-    for row in singles:
-        song_id, name, release_date, spotify_url, qr_url, duration, large_img, medium_img, thumb_img = row
-        html += f"""
-    <tr class="main-row">
-        <td>
-            <a href="{large_img}" target="_blank" class="thumbnail">
-                <img src="{thumb_img}" width="64" height="64" alt="{name}">
-            </a>
-        </td>
-        <td>Single</td>
-        <td><a href="{spotify_url}" target="_blank">{name}</a></td>
-        <td>{format_date(release_date)}</td>
-        <td class="duration">{duration}</td>
-        <td>
-            <a href="{large_img}" target="_blank">640x640</a> |
-            <a href="{medium_img}" target="_blank">300x300</a> |
-            <a href="{thumb_img}" target="_blank">64x64</a>
-            <a href="{qr_url}" target="_blank" class="qr-link">QR Code</a>
-        </td>
-    </tr>"""
-    
+    # Close HTML
     html += """
             </tbody>
         </table>
@@ -206,16 +242,23 @@ def generate_discography():
     </html>
     """
     
-    # Write the HTML file
-    output_path = Path(__file__).parent / 'discography.html'
-    output_path.parent.mkdir(exist_ok=True)
+    # Close database connection
+    conn.close()
     
+    # Determine output path
+    if output_dir is None:
+        output_dir = Path.cwd()
+    elif isinstance(output_dir, str):
+        output_dir = Path(output_dir)
+    
+    output_path = output_dir / 'discography.html'
+    
+    # Write HTML to file
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html)
     
     print(f"Generated discography at {output_path}")
-    
-    conn.close()
+    return output_path
 
 if __name__ == "__main__":
     generate_discography()

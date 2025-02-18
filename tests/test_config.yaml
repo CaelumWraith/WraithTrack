@@ -1,0 +1,54 @@
+---
+# Test configuration
+image:
+  width: 800
+  height: 1000
+  background_color: "#ff0000"  # red
+  
+  artwork:
+    padding: 50
+    vertical_offset: -10
+    overlay:
+      color: "#000000"
+      opacity: 100
+      
+qr_code:
+  spotify:
+    base_url: "https://scannables.scdn.co/uri/plain/png"
+    foreground: "ffffff"  # white (hex without #)
+    background: "black"   # named color
+    size: 200
+    vertical_offset: 80
+    invert_colors: true
+
+text:
+  title:
+    font:
+      name: "Game Of Squids.ttf"
+      size: 80
+    vertical_offset: -80
+    alignment: "center"
+    shadow:
+      enabled: true
+      offset: 2
+      color: "#444444"
+    color: "#ffff00"  # yellow
+    
+  info:
+    font:
+      name: "federalescort.ttf"
+      size: 35
+    alignment: "center"
+    color: "#ffff00"  # yellow
+    
+  link:
+    font:
+      name: "federalescort.ttf"
+      size: 25
+    alignment: "center"
+    color: "#eeeeee"
+    
+  streaming:
+    text: "STREAMING NOW"
+    vertical_offset: 60
+    alignment: "center"

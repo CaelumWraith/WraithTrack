@@ -1,6 +1,9 @@
 import sqlite3
 from pathlib import Path
 import dataclasses
+from datetime import datetime, timedelta
+import random
+
 # build dataclasses for albums and songs using the sql ddl below
 
 
@@ -81,25 +84,18 @@ def get_db_path():
     data_dir = Path(__file__).parent
     return data_dir / 'artistrack.db'
 
-def recreate_db(db_path=None):
-    """Drop and recreate the database and all tables"""
-    if db_path is None:
-        db_path = get_db_path()
-    
-    # Remove existing database if it exists
-    if db_path.exists():
-        db_path.unlink()
-    
-    # Create new database and tables
-    init_db(db_path)
-    print(f"Database recreated at {db_path}")
-
 def init_db(db_path=None):
-    """Initialize the SQLite database and create tables if they don't exist"""
+    """Initialize the SQLite database and create tables if they don't exist.
+    
+    Args:
+        db_path: Optional path to database file. If None, uses default path.
+    """
     if db_path is None:
         db_path = get_db_path()
     
     # Create parent directory if it doesn't exist
+    if isinstance(db_path, str):
+        db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Connect to SQLite database (creates it if it doesn't exist)
@@ -149,6 +145,57 @@ def init_db(db_path=None):
     conn.close()
     
     print(f"Database initialized at {db_path}")
+    return db_path
+
+def recreate_db(db_path=None):
+    """Drop and recreate the database and all tables.
+    
+    Args:
+        db_path: Optional path to database file. If None, uses default path.
+    """
+    if db_path is None:
+        db_path = get_db_path()
+    
+    # Convert string path to Path object
+    if isinstance(db_path, str):
+        db_path = Path(db_path)
+    
+    # Remove existing database if it exists
+    if db_path.exists():
+        db_path.unlink()
+    
+    # Create new database and tables
+    return init_db(db_path)
+
+def init_or_update_db():
+    """Initialize or update the database schema"""
+    db_path = get_db_path()
+    
+    # If database doesn't exist, create it
+    if not db_path.exists():
+        init_db()
+        return
+    
+    # If database exists, try to add plays table
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    
+    # Check if plays table exists
+    cursor.execute("""
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='plays'
+    """)
+    
+    if cursor.fetchone():
+        # Drop plays table
+        cursor.execute("""
+            DROP TABLE plays
+        """)
+        
+        conn.commit()
+        print("Removed plays table from existing database")
+    
+    conn.close()
 
 if __name__ == "__main__":
     init_db()

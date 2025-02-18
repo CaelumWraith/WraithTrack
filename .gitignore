@@ -42,3 +42,6 @@ story_*.png
 discography.html
 .env
 .envrc
+spottest.sh
+.venv
+*bearer_token.json
