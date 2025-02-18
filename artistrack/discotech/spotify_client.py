@@ -13,7 +13,7 @@ class SpotifyApiError(Exception):
 class SpotifyClient:
     """Client for interacting with Spotify API"""
     
-    def __init__(self, artist_id='16SiO2DZeffJZAKlppdOAw', verbose=False):
+    def __init__(self, artist_id=None, verbose=False):
         """Initialize the client"""
         self.artist_id = artist_id
         self.verbose = verbose
@@ -25,7 +25,7 @@ class SpotifyClient:
         
         self.bearer_token = None
         self.bearer_token_expires = None
-        
+    
     def get_data_directory(self) -> Path:
         """Get the data directory path"""
         # Get the path to the artistrack/data directory

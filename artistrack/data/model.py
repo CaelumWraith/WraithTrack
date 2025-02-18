@@ -4,40 +4,69 @@ import dataclasses
 from datetime import datetime, timedelta
 import random
 
-# build dataclasses for albums and songs using the sql ddl below
-
+# ddl for artists table
+artist_table_ddl = """CREATE TABLE artists (
+    artist_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    spotify_url TEXT NOT NULL,
+    spotify_uri TEXT NOT NULL,
+    image_large_uri TEXT,
+    image_medium_uri TEXT,
+    image_thumb_uri TEXT
+);"""
 
 # ddl for albums table
 album_table_ddl = """CREATE TABLE albums (
-     album_id INTEGER PRIMARY KEY AUTOINCREMENT,
-     name TEXT NOT NULL,
-     release_date DATE NOT NULL,
-     track_count INTEGER NOT NULL,
-     spotify_url TEXT NOT NULL,
-     image_large_uri TEXT NOT NULL,
-     image_medium_uri TEXT NOT NULL,
-     image_thumb_uri TEXT NOT NULL);"""
-
-
+    album_id TEXT PRIMARY KEY,
+    artist_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    release_date DATE NOT NULL,
+    track_count INTEGER NOT NULL,
+    spotify_url TEXT NOT NULL,
+    spotify_uri TEXT NOT NULL,
+    qr_code_url TEXT NOT NULL,
+    album_type TEXT NOT NULL,
+    image_large_uri TEXT NOT NULL,
+    image_medium_uri TEXT NOT NULL,
+    image_thumb_uri TEXT NOT NULL,
+    FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
+);"""
 
 # ddl for songs table
-song_table_ddl= """CREATE TABLE songs (
-     song_id INTEGER PRIMARY KEY AUTOINCREMENT,
-     album_id INTEGER NOT NULL,
-     name TEXT NOT NULL,
-     release_date DATE NOT NULL,
-     track_number INTEGER,
-     duration_ms INTEGER NOT NULL,
-     duration TEXT NOT NULL,  -- stored as "M:SS" format
-     spotify_url TEXT NOT NULL,
-     image_large_uri TEXT NOT NULL,
-     image_medium_uri TEXT NOT NULL,
-     image_thumb_uri TEXT NOT NULL,
-     FOREIGN KEY (album_id) REFERENCES albums(album_id));"""
+song_table_ddl = """CREATE TABLE songs (
+    song_id TEXT PRIMARY KEY,
+    artist_id TEXT NOT NULL,
+    album_id TEXT,
+    name TEXT NOT NULL,
+    release_date DATE NOT NULL,
+    track_number INTEGER,
+    duration_ms INTEGER NOT NULL,
+    duration TEXT NOT NULL,  -- stored as "M:SS" format
+    spotify_url TEXT NOT NULL,
+    spotify_uri TEXT NOT NULL,
+    qr_code_url TEXT NOT NULL,
+    is_single BOOLEAN NOT NULL,
+    image_large_uri TEXT NOT NULL,
+    image_medium_uri TEXT NOT NULL,
+    image_thumb_uri TEXT NOT NULL,
+    FOREIGN KEY (album_id) REFERENCES albums(album_id),
+    FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
+);"""
+
+@dataclasses.dataclass
+class Artist:
+    artist_id: str
+    name: str
+    spotify_url: str
+    spotify_uri: str
+    image_large_uri: str
+    image_medium_uri: str
+    image_thumb_uri: str
 
 @dataclasses.dataclass
 class Album:
     album_id: str
+    artist_id: str
     name: str
     release_date: str
     track_count: int
@@ -52,6 +81,7 @@ class Album:
 @dataclasses.dataclass
 class Song:
     song_id: str
+    artist_id: str
     album_id: str
     name: str
     release_date: str
@@ -68,15 +98,9 @@ class Song:
 
 @dataclasses.dataclass
 class Discography:
+    artist: Artist
     albums: list[Album]
     songs: list[Song]
-
-@dataclasses.dataclass
-class Artist:
-    name: str
-    discography: Discography
-    songs: list[Song]
-    albums: list[Album]
 
 def get_db_path():
     """Get the path to the database file"""
@@ -97,38 +121,52 @@ def init_db(db_path=None):
     if isinstance(db_path, str):
         db_path = Path(db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
-
+    
     # Connect to SQLite database (creates it if it doesn't exist)
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Create albums table if it doesn't exist
-    cursor.execute('''
+    # Create tables if they don't exist
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS artists (
+            artist_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            spotify_url TEXT NOT NULL,
+            spotify_uri TEXT NOT NULL,
+            image_large_uri TEXT,
+            image_medium_uri TEXT,
+            image_thumb_uri TEXT
+        )
+    """)
+    
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS albums (
             album_id TEXT PRIMARY KEY,
+            artist_id TEXT NOT NULL,
             name TEXT NOT NULL,
-            release_date TEXT NOT NULL,
+            release_date DATE NOT NULL,
+            track_count INTEGER NOT NULL,
             spotify_url TEXT NOT NULL,
             spotify_uri TEXT NOT NULL,
             qr_code_url TEXT NOT NULL,
-            track_count INTEGER NOT NULL,
             album_type TEXT NOT NULL,
             image_large_uri TEXT NOT NULL,
             image_medium_uri TEXT NOT NULL,
-            image_thumb_uri TEXT NOT NULL
+            image_thumb_uri TEXT NOT NULL,
+            FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
         )
-    ''')
+    """)
     
-    # Create songs table if it doesn't exist
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS songs (
             song_id TEXT PRIMARY KEY,
+            artist_id TEXT NOT NULL,
             album_id TEXT,
             name TEXT NOT NULL,
-            release_date TEXT NOT NULL,
+            release_date DATE NOT NULL,
             track_number INTEGER,
             duration_ms INTEGER NOT NULL,
-            duration TEXT NOT NULL,  -- stored as "M:SS" format
+            duration TEXT NOT NULL,
             spotify_url TEXT NOT NULL,
             spotify_uri TEXT NOT NULL,
             qr_code_url TEXT NOT NULL,
@@ -136,16 +174,13 @@ def init_db(db_path=None):
             image_large_uri TEXT NOT NULL,
             image_medium_uri TEXT NOT NULL,
             image_thumb_uri TEXT NOT NULL,
-            FOREIGN KEY (album_id) REFERENCES albums(album_id)
+            FOREIGN KEY (album_id) REFERENCES albums(album_id),
+            FOREIGN KEY (artist_id) REFERENCES artists(artist_id)
         )
-    ''')
+    """)
     
-    # Commit changes and close connection
     conn.commit()
     conn.close()
-    
-    print(f"Database initialized at {db_path}")
-    return db_path
 
 def recreate_db(db_path=None):
     """Drop and recreate the database and all tables.
@@ -156,45 +191,41 @@ def recreate_db(db_path=None):
     if db_path is None:
         db_path = get_db_path()
     
-    # Convert string path to Path object
+    # Delete existing database file
     if isinstance(db_path, str):
         db_path = Path(db_path)
-    
-    # Remove existing database if it exists
     if db_path.exists():
         db_path.unlink()
     
-    # Create new database and tables
-    return init_db(db_path)
+    # Create new database
+    init_db(db_path)
 
 def init_or_update_db():
     """Initialize or update the database schema"""
     db_path = get_db_path()
     
-    # If database doesn't exist, create it
+    # Check if database exists
     if not db_path.exists():
         init_db()
         return
     
-    # If database exists, try to add plays table
+    # Connect to database
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Check if plays table exists
-    cursor.execute("""
-        SELECT name FROM sqlite_master 
-        WHERE type='table' AND name='plays'
-    """)
+    # Get list of existing tables
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = {row[0] for row in cursor.fetchall()}
     
-    if cursor.fetchone():
-        # Drop plays table
-        cursor.execute("""
-            DROP TABLE plays
-        """)
-        
-        conn.commit()
-        print("Removed plays table from existing database")
+    # Create missing tables
+    if 'artists' not in tables:
+        cursor.execute(artist_table_ddl)
+    if 'albums' not in tables:
+        cursor.execute(album_table_ddl)
+    if 'songs' not in tables:
+        cursor.execute(song_table_ddl)
     
+    conn.commit()
     conn.close()
 
 if __name__ == "__main__":

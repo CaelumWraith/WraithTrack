@@ -10,6 +10,7 @@ from artistrack.discotech.generate_discography import format_date
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
+import requests
 
 def load_story_config():
     """Load story configuration"""
@@ -716,86 +717,149 @@ def setup_tab():
     new_client_id = st.text_input("Client ID", value=current_client_id, type="password")
     new_client_secret = st.text_input("Client Secret", value=current_client_secret, type="password")
     
-    if st.button("Save Credentials", key="save_creds"):
-        # Update .env file
-        env_path = Path(__file__).parent.parent / '.env'
-        
-        env_content = []
-        if env_path.exists():
-            with open(env_path, 'r') as f:
-                env_content = f.readlines()
-        
-        # Update or add credentials
-        updated_id = False
-        updated_secret = False
-        
-        for i, line in enumerate(env_content):
-            if line.startswith('SPOTIFY_CLIENT_ID='):
-                env_content[i] = f'SPOTIFY_CLIENT_ID={new_client_id}\n'
-                updated_id = True
-            elif line.startswith('SPOTIFY_CLIENT_SECRET='):
-                env_content[i] = f'SPOTIFY_CLIENT_SECRET={new_client_secret}\n'
-                updated_secret = True
-        
-        if not updated_id:
-            env_content.append(f'SPOTIFY_CLIENT_ID={new_client_id}\n')
-        if not updated_secret:
-            env_content.append(f'SPOTIFY_CLIENT_SECRET={new_client_secret}\n')
-        
-        with open(env_path, 'w') as f:
-            f.writelines(env_content)
-        
-        st.success("Credentials saved! Please restart the application for changes to take effect.")
-    
-    # Database management
-    st.write("---")
-    st.subheader("Database Management")
-    
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("Initialize Database", key="init_db"):
-            from artistrack.data.model import init_db
-            init_db()
-            st.success("Database initialized!")
-        
-        if st.button("Reset Database", key="reset_db"):
-            if st.checkbox("I understand this will delete all data"):
-                from artistrack.data.model import recreate_db
-                recreate_db()
-                st.success("Database reset successfully!")
+        if st.button("Save Credentials", key="save_creds"):
+            # Update .env file
+            env_path = Path(__file__).parent.parent / '.env'
+            
+            env_content = []
+            if env_path.exists():
+                with open(env_path, 'r') as f:
+                    env_content = f.readlines()
+            
+            # Update or add credentials
+            updated_id = False
+            updated_secret = False
+            
+            new_content = []
+            for line in env_content:
+                if line.startswith('SPOTIFY_CLIENT_ID='):
+                    new_content.append(f'SPOTIFY_CLIENT_ID={new_client_id}\n')
+                    updated_id = True
+                elif line.startswith('SPOTIFY_CLIENT_SECRET='):
+                    new_content.append(f'SPOTIFY_CLIENT_SECRET={new_client_secret}\n')
+                    updated_secret = True
+                else:
+                    new_content.append(line)
+            
+            if not updated_id:
+                new_content.append(f'SPOTIFY_CLIENT_ID={new_client_id}\n')
+            if not updated_secret:
+                new_content.append(f'SPOTIFY_CLIENT_SECRET={new_client_secret}\n')
+            
+            with open(env_path, 'w') as f:
+                f.writelines(new_content)
+            
+            # Update environment variables
+            os.environ['SPOTIFY_CLIENT_ID'] = new_client_id
+            os.environ['SPOTIFY_CLIENT_SECRET'] = new_client_secret
+            
+            st.success("Credentials saved successfully!")
     
     with col2:
-        if st.button("Refresh Artist Data", key="refresh_data"):
-            with st.spinner("Fetching artist data..."):
-                spotify = SpotifyClient()
-                data_manager = DataManager()
+        if st.button("Test Credentials", key="test_creds"):
+            try:
+                client = SpotifyClient()
+                client.ensure_valid_token()
+                st.success("Credentials are valid!")
+            except Exception as e:
+                st.error(f"Error testing credentials: {str(e)}")
+    
+    # Artist Management
+    st.subheader("Artist Management")
+    
+    # Artist lookup
+    st.text("Search for an artist on Spotify")
+    artist_search = st.text_input("Artist Name", key="artist_search")
+    
+    if st.button("Search Artist", key="search_artist"):
+        if not artist_search:
+            st.warning("Please enter an artist name")
+        else:
+            try:
+                client = SpotifyClient()
+                headers = {
+                    'Authorization': f'Bearer {client.ensure_valid_token()}'
+                }
                 
-                # Get artist data
-                st.write("Fetching artist data...")
-                artist_data = spotify.get_artist_data()
+                # Search for artist
+                response = requests.get(
+                    f'https://api.spotify.com/v1/search',
+                    headers=headers,
+                    params={
+                        'q': artist_search,
+                        'type': 'artist',
+                        'limit': 5
+                    }
+                )
+                response.raise_for_status()
                 
-                # Get all albums
-                st.write("Fetching artist albums...")
-                albums = spotify.get_all_artist_albums()
-                
-                # Process each album
-                progress_bar = st.progress(0)
-                for i, album_data in enumerate(albums, 1):
-                    # Save album
-                    album = data_manager.save_album(album_data)
-                    st.write(f"Saved album: {album.name}")
-                    
-                    # Get and save all tracks for this album
-                    tracks = spotify.get_album_tracks(album_data['id'])
-                    for track_data in tracks:
-                        track_data['images'] = album_data['images']
-                        track_data['release_date'] = album_data['release_date']
-                        data_manager.save_song(track_data, album.album_id)
-                    
-                    progress_bar.progress(i / len(albums))
-                
-                st.success("Database updated successfully!")
+                artists = response.json()['artists']['items']
+                if not artists:
+                    st.warning("No artists found")
+                else:
+                    st.write("Select an artist to add:")
+                    for artist in artists:
+                        col1, col2 = st.columns([4, 1])
+                        with col1:
+                            st.write(f"**{artist['name']}**")
+                            if artist.get('genres'):
+                                st.write(f"Genres: {', '.join(artist['genres'])}")
+                            if artist.get('images'):
+                                st.image(artist['images'][-1]['url'], width=50)
+                        with col2:
+                            if st.button("Add Artist", key=f"add_{artist['id']}"):
+                                # Save artist to database
+                                data_manager = DataManager()
+                                data_manager.save_artist(artist)
+                                st.success(f"Added {artist['name']} to your artists!")
+                                
+            except Exception as e:
+                st.error(f"Error searching for artist: {str(e)}")
+    
+    # Show current artists
+    st.text("Current Artists")
+    data_manager = DataManager()
+    artists = data_manager.get_artists()
+    
+    if not artists:
+        st.info("No artists added yet. Use the search above to add artists.")
+    else:
+        for artist in artists:
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col1:
+                st.write(f"**{artist.name}**")
+                if artist.image_thumb_uri:
+                    st.image(artist.image_thumb_uri, width=50)
+            with col2:
+                if st.button("Update Data", key=f"update_{artist.artist_id}"):
+                    try:
+                        client = SpotifyClient(artist_id=artist.artist_id)
+                        artist_data = client.get_artist_data()
+                        data_manager.save_artist(artist_data)
+                        st.success(f"Updated {artist.name}'s data!")
+                    except Exception as e:
+                        st.error(f"Error updating artist data: {str(e)}")
+            with col3:
+                if st.button("Remove", key=f"remove_{artist.artist_id}"):
+                    try:
+                        conn = data_manager.get_connection()
+                        cursor = conn.cursor()
+                        
+                        # Delete artist and all related data
+                        cursor.execute("DELETE FROM songs WHERE artist_id = ?", (artist.artist_id,))
+                        cursor.execute("DELETE FROM albums WHERE artist_id = ?", (artist.artist_id,))
+                        cursor.execute("DELETE FROM artists WHERE artist_id = ?", (artist.artist_id,))
+                        
+                        conn.commit()
+                        conn.close()
+                        
+                        st.success(f"Removed {artist.name} and all related data")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error removing artist: {str(e)}")
 
 def main():
     """Main application entry point"""
